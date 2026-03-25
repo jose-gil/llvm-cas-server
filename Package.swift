@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "llvm-cas",
+    name: "llvm-cas-server",
     platforms: [
         .macOS("15.0")
     ],
