@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-final class ActionCacheDatabaseStorage {
+final class GRDBKeyvalueDataSource: KeyvalueDataSource {
     private let dbQueue: DatabaseQueue
     
     init(path: String) throws {
@@ -12,16 +12,14 @@ final class ActionCacheDatabaseStorage {
     // ActionCache is a key value storage can be used to associate two CASIDs.
     private func setupDatabase() throws {
         try dbQueue.write { db in
-            try db.execute(sql: """
-                    CREATE TABLE IF NOT EXISTS action_cache (
-                        action_key BLOB PRIMARY KEY,
-                        value_data BLOB NOT NULL
-                    )
-                """)
+            try db.create(table: "action_cache") { t in
+                t.primaryKey("action_key", .blob)
+                t.column("value_data", .blob).notNull()
+            }
         }
     }
     
-    func putValue(key: Data, value: Data) throws {
+    func setValue(key: Data, value: Data) throws {
         try dbQueue.write { db in
             try db.execute(
                 sql: "INSERT OR REPLACE INTO action_cache (action_key, value_data) VALUES (?, ?)",

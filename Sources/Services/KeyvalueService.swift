@@ -1,9 +1,11 @@
 import Foundation
 import GRPCCore
 
-struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleServiceProtocol {
-    private var cacheServer: ActionCacheDatabaseStorage? {
-        try? ActionCacheDatabaseStorage(path: "")
+struct KeyvalueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleServiceProtocol {
+    private let repository: KeyvalueRepository
+    
+    init(repository: KeyvalueRepository) {
+        self.repository = repository
     }
     
     func putValue(
@@ -15,7 +17,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         
         var response = CompilationCacheService_Keyvalue_V1_PutValueResponse()
         do {
-            try cacheServer?.putValue(key: key, value: value)
+            try await repository.setValue(key: key, value: value)
             return response
         } catch {
             var responseError = CompilationCacheService_Keyvalue_V1_ResponseError()
@@ -33,7 +35,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
 
         var response = CompilationCacheService_Keyvalue_V1_GetValueResponse()
         do {
-            if let data = try cacheServer?.getValue(key: key) {
+            if let data = try await repository.getValue(key: key) {
                 response.outcome = .success
                 response.value = try CompilationCacheService_Keyvalue_V1_Value(serializedBytes: data)
             } else {
