@@ -12,18 +12,19 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         request: CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.PutValue.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.PutValue.Output {
-        let key: Data = request.key
-        let value: Data = try request.value.serializedData()
         
-        var response = CompilationCacheService_Keyvalue_V1_PutValueResponse()
         do {
-            try await repository.setValue(key: key, value: value)
-            return response
+            let key = request.key
+            let valueData = try request.value.serializedData()
+            
+            try await repository.setValue(key: key, value: valueData)            
+            return .with { _ in }
         } catch {
-            var responseError = CompilationCacheService_Keyvalue_V1_ResponseError()
-            responseError.description_p = "Error al guardar en caché: \(error.localizedDescription)"
-            response.error = responseError
-            return response
+            return .with {
+                $0.error = .with {
+                    $0.description_p = "Error al guardar en caché: \(error.localizedDescription)"
+                }
+            }
         }
     }
     
@@ -31,23 +32,27 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         request: CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.GetValue.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.GetValue.Output {
-        let key: Data = request.key
-
-        var response = CompilationCacheService_Keyvalue_V1_GetValueResponse()
+        
         do {
-            if let data = try await repository.getValue(key: key) {
-                response.outcome = .success
-                response.value = try CompilationCacheService_Keyvalue_V1_Value(serializedBytes: data)
+            if let data = try await repository.getValue(key: request.key) {
+                let cachedValue = try CompilationCacheService_Keyvalue_V1_Value(serializedBytes: data)
+                
+                return .with {
+                    $0.outcome = .success
+                    $0.value = cachedValue
+                }
             } else {
-                response.outcome = .keyNotFound
+                return .with {
+                    $0.outcome = .keyNotFound
+                }
             }
         } catch {
-            response.outcome = .error
-            var errorDetail = CompilationCacheService_Keyvalue_V1_ResponseError()
-            errorDetail.description_p = "Error interno: \(error.localizedDescription)"
-            response.error = errorDetail
+            return .with {
+                $0.outcome = .error
+                $0.error = .with {
+                    $0.description_p = "Error interno: \(error.localizedDescription)"
+                }
+            }
         }
-            
-        return response
     }
 }

@@ -2,25 +2,60 @@ import Foundation
 import GRPCCore
 
 struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProtocol {
+    private let repository: CASRepository
+
+    init(repository: CASRepository) {
+        self.repository = repository
+    }
+    
     func save(
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Save.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Save.Output {
-        let data = request.data.blob.data
+        let dataToSave = request.data.blob.data
         
-        var response = CompilationCacheService_Cas_V1_CASSaveResponse()
+        guard !dataToSave.isEmpty else {
+            return .with {
+                $0.error = .with { $0.description_p = "Empty data" }
+            }
+        }
         
-        var casID = CompilationCacheService_Cas_V1_CASDataID()
-//        casID.id = convertKeyToCasID(data)
-        
-        return .init()
+        do {
+            let hashID = try await repository.set(value: dataToSave)
+            return .with {
+                $0.casID = .with { $0.id = hashID }
+            }
+        } catch {
+            return .with {
+                $0.error = .with { $0.description_p = "Internal Save Error: \(error.localizedDescription)" }
+            }
+        }
     }
     
     func load(
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Load.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Load.Output {
-        return .init()
+        let key = request.casID.id        
+        do {
+            if let data = try await repository.get(key: key) {
+                return .with {
+                    $0.outcome = .success
+                    $0.data = .with { blob in
+                        blob.blob = .with { $0.data = data }
+                    }
+                }
+            } else {
+                return .with {
+                    $0.outcome = .objectNotFound
+                }
+            }
+        } catch {
+            return .with {
+                $0.outcome = .error
+                $0.error = .with { $0.description_p = "Internal Load Error: \(error.localizedDescription)" }
+            }
+        }
     }
     
     func put(
