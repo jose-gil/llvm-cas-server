@@ -22,7 +22,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         } catch {
             return .with {
                 $0.error = .with {
-                    $0.description_p = "Error al guardar en caché: \(error.localizedDescription)"
+                    $0.description_p = "Chache error: \(error.localizedDescription)"
                 }
             }
         }
@@ -50,7 +50,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
             return .with {
                 $0.outcome = .error
                 $0.error = .with {
-                    $0.description_p = "Error interno: \(error.localizedDescription)"
+                    $0.description_p = "Internal error: \(error.localizedDescription)"
                 }
             }
         }

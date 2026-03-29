@@ -1,22 +1,16 @@
 import Foundation
 import CryptoKit
 
-protocol CASRepository: Sendable {
-    func set(value: Data) async throws -> Data
-    func get(key: Data) async throws -> Data?
-}
-
-actor DiskCASRepository: CASRepository {
-    let rootURL: URL
-    let tmpURL: URL
-    let objectsURL: URL
+actor DiskCASBlobRepository: CASBlobRepository {
+    private let rootURL: URL
+    private let tmpURL: URL
+    private let objectsURL: URL
     
     init(rootPath: String) throws {
         self.rootURL = URL(fileURLWithPath: rootPath)
         self.tmpURL = rootURL.appendingPathComponent("tmp")
         self.objectsURL = rootURL.appendingPathComponent("objects")
         
-        // Crear estructura inicial
         try FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: objectsURL, withIntermediateDirectories: true)
     }

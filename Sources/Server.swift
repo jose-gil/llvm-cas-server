@@ -8,7 +8,8 @@ struct Server {
         let cache = NSDataKeyValueSource(limit: 100)
         let local = try GRDBKeyValueDataSource(path: "")
         let kevValueRepository = DefaultKeyValueRepository(cache: cache, local: local)
-        let casRepository = try DiskCASRepository(rootPath: "")
+        let casBlobRepository = try DiskCASBlobRepository(rootPath: "")
+        let casObjectRepository = try DiskCASObjectRepository(rootPath: "")
 
         let server = GRPCServer(
             transport: .http2NIOPosix(
@@ -16,7 +17,7 @@ struct Server {
                 transportSecurity: .plaintext
             ),
             services: [
-                CASService(repository: casRepository),
+                CASService(blobRepository: casBlobRepository, objectRepository: casObjectRepository),
                 KeyValueService(repository: kevValueRepository)
             ]
         )

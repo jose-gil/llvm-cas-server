@@ -2,10 +2,12 @@ import Foundation
 import GRPCCore
 
 struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProtocol {
-    private let repository: CASRepository
-
-    init(repository: CASRepository) {
-        self.repository = repository
+    private let blobRepository: CASBlobRepository
+    private let objectRepository: CASObjectRepository
+    
+    init(blobRepository: CASBlobRepository, objectRepository: CASObjectRepository) {
+        self.blobRepository = blobRepository
+        self.objectRepository = objectRepository
     }
     
     func save(
@@ -21,7 +23,7 @@ struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProt
         }
         
         do {
-            let hashID = try await repository.set(value: dataToSave)
+            let hashID = try await blobRepository.set(value: dataToSave)
             return .with {
                 $0.casID = .with { $0.id = hashID }
             }
@@ -36,9 +38,9 @@ struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProt
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Load.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Load.Output {
-        let key = request.casID.id        
+        let key = request.casID.id
         do {
-            if let data = try await repository.get(key: key) {
+            if let data = try await blobRepository.get(key: key) {
                 return .with {
                     $0.outcome = .success
                     $0.data = .with { blob in
@@ -62,19 +64,45 @@ struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProt
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Put.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Put.Output {
-        return .init()
+        do {
+            let data = request.data.blob.data
+            let references = request.data.references.map { $0.id }
+            
+            let casID = try await objectRepository.set(data: data, references: references)
+            
+            return .with {
+                $0.casID = .with { $0.id = casID }
+            }
+        } catch {
+            return .with {
+                $0.error = .with { $0.description_p = error.localizedDescription }
+            }
+        }
     }
     
     func get(
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Get.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Get.Output {
-        return .init()
-    }
-    
-    private func convertKeyToCasID(_ key: Data) -> String {
-        "0~" + key.dropFirst().base64EncodedString()
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "+", with: "-")
+        do {
+            if let result = try await objectRepository.get(key: request.casID.id) {
+                return .with {
+                    $0.outcome = .success
+                    $0.data = .with { obj in
+                        obj.blob = .with { $0.data = result.data }
+                        obj.references = result.references.map { refID in
+                                .with { $0.id = refID }
+                        }
+                    }
+                }
+            } else {
+                return .with { $0.outcome = .objectNotFound }
+            }
+        } catch {
+            return .with {
+                $0.outcome = .error
+                $0.error = .with { $0.description_p = error.localizedDescription }
+            }
+        }
     }
 }
