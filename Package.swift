@@ -25,6 +25,13 @@ let package = Package(
             plugins: [
               .plugin(name: "GRPCProtobufGenerator", package: "grpc-swift-protobuf"),
             ]
+        ),
+        .testTarget(
+            name: "ServerTests",
+            dependencies: [
+                "Server"
+            ],
+            path: "Tests"
         )
     ]
 )
