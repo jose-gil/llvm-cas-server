@@ -1,10 +1,21 @@
 # Swift LLVM CAS Server (llvm-cas-server)
 
-A high-performance Content Addressable Storage (CAS) server implementation written in Swift, inspired by the [LLVM CAS infrastructure](https://llvm.org/docs/ContentAddressableStorage.html).
+A high-performance Content Addressable Storage (CAS) server implementation written in Swift, inspired by the [LLVM CAS infrastructure](https://llvm.org/docs/ContentAddressableStorage.html) and usign [protos](
+https://github.com/swiftlang/llvm-project/blob/next/llvm/lib/RemoteCachingService/RemoteCacheProto/compilation_caching_cas.proto#L24).
 
-https://github.com/swiftlang/llvm-project/blob/next/llvm/lib/RemoteCachingService/RemoteCacheProto/compilation_caching_cas.proto#L24
+## KeyValue Service (Action Cache)
+
+The KeyValue or Action Cache: This is a map that associates a "Question" with an "Answer". It is mutable (you can update the result of a compilation if, for example, you change the compiler version).
+
+It has two services:
+
+- PutValueRequest -> key: Data, Value: Dictonary<String, Data> -> # -> PutValueResponse. You put all your inputs referecenes related with CASID (the source code of main.c, the compiler flags -O3, the headers).
+
+- GetValueRequest -> key: Data -> # -> GetValueResponse -> Value: Dictonary<String, Data>. You ask the service: "Has anyone already executed the action with this CASID?".
 
 ## CAS Service
+
+This is a service where the "key" is the hash of the content. If you give it the same file twice, it gives you the same key. It is immutable.
 
 The basic unit of the CAS library is a `CASObject`, where it contains:
 * Data: arbitrary data
@@ -16,20 +27,11 @@ CASBlob:: blob: CASBytes
 CASBytes:: data: Data | filepath: String
 ResponseError:: description: String
 
--> CASSaveRequest -> CASBlob -> CASBytes -> data -> # -> CASSaveResponse -> CASDataID -> id
--> CASLoadRequest -> CASDataID -> id -> # -> CASLoadResponse -> CASBlob -> CASBytes -> data
+- CASSaveRequest -> CASBlob -> CASBytes -> data -> # -> CASSaveResponse -> CASDataID -> id
+- CASLoadRequest -> CASDataID -> id -> # -> CASLoadResponse -> CASBlob -> CASBytes -> data
 
--> CASGetRequest -> CASDataID -> id -> # -> CASGetResponse -> CASObject -> CASBytes, Array<CASDataID>
--> CASPutRequest -> CASObject -> CASBytes, Array<CASDataID> -> # -> CASPUTResponse -> CASDataID -> id
-
-## Key Value Service
-
-Key value storage can be used to associate two CASIDs. It is usually used with an ObjectStore to map an input CASObject to an output CASObject with their CASIDs.
-
-Value:: entries: Dictionary<String,Data>
-
--> PutValueRequest -> key: Data | Value -> entries -> # -> PutValueResponse
--> GetValueRequest -> key: Data -> # -> GetValueResponse  -> Value -> entries
+- CASGetRequest -> CASDataID -> id -> # -> CASGetResponse -> CASObject -> CASBytes, Array<CASDataID>
+- CASPutRequest -> CASObject -> CASBytes, Array<CASDataID> -> # -> CASPUTResponse -> CASDataID -> id
 
 ## Contribute
 

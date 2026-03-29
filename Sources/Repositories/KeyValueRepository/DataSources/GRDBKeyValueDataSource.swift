@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-final class GRDBKeyvalueDataSource: KeyvalueDataSource {
+final class GRDBKeyValueDataSource: KeyValueDataSource {
     private let dbQueue: DatabaseQueue
     
     init(path: String) throws {

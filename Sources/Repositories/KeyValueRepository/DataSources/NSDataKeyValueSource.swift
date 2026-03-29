@@ -1,6 +1,6 @@
 import Foundation
 
-final class NSDataKeyvalueSource: KeyvalueDataSource {
+final class NSDataKeyValueSource: KeyValueDataSource {
     private let cache = NSCache<NSData, NSData>()
     
     /// - Parameter limit: The maximum amount of memory allowed for the cache, specified in megabytes (MB).

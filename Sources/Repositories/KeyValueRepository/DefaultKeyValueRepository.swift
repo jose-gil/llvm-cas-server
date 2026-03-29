@@ -1,10 +1,10 @@
 import Foundation
 
-actor DefaultKeyvalueRepository: KeyvalueRepository {
-    private let cache: KeyvalueDataSource
-    private let local: KeyvalueDataSource
+actor DefaultKeyValueRepository: KeyValueRepository {
+    private let cache: KeyValueDataSource
+    private let local: KeyValueDataSource
     
-    init(cache: KeyvalueDataSource, local: KeyvalueDataSource) {
+    init(cache: KeyValueDataSource, local: KeyValueDataSource) {
         self.cache = cache
         self.local = local
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-protocol KeyvalueDataSource {
+protocol KeyValueDataSource {
     func setValue(key: Data, value: Data) throws
     func getValue(key: Data) throws -> Data?
 }

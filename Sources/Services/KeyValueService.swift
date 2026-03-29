@@ -1,10 +1,10 @@
 import Foundation
 import GRPCCore
 
-struct KeyvalueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleServiceProtocol {
-    private let repository: KeyvalueRepository
+struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleServiceProtocol {
+    private let repository: KeyValueRepository
     
-    init(repository: KeyvalueRepository) {
+    init(repository: KeyValueRepository) {
         self.repository = repository
     }
     
