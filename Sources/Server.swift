@@ -4,16 +4,17 @@ import GRPCNIOTransportHTTP2
 @main
 struct Server {
     static func main() async throws {
-        let port: Int = 9932
+        let port: Int = 9093
+        let rootPath: String = "/tmp/llvm-cas"
         let cache = NSDataKeyValueSource(limit: 100)
-        let local = try GRDBKeyValueDataSource(path: "")
+        let local = try GRDBKeyValueDataSource(path: rootPath)
         let kevValueRepository = DefaultKeyValueRepository(cache: cache, local: local)
-        let casBlobRepository = try DiskCASBlobRepository(rootPath: "")
-        let casObjectRepository = try DiskCASObjectRepository(rootPath: "")
+        let casBlobRepository = try DiskCASBlobRepository(rootPath: rootPath)
+        let casObjectRepository = try DiskCASObjectRepository(rootPath: rootPath)
 
         let server = GRPCServer(
             transport: .http2NIOPosix(
-                address: .ipv4(host: "127.0.0.1", port: port),
+                address: .ipv4(host: "0.0.0.0", port: port),
                 transportSecurity: .plaintext
             ),
             services: [

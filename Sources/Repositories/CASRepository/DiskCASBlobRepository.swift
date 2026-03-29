@@ -9,7 +9,7 @@ actor DiskCASBlobRepository: CASBlobRepository {
     init(rootPath: String) throws {
         self.rootURL = URL(fileURLWithPath: rootPath)
         self.tmpURL = rootURL.appendingPathComponent("tmp")
-        self.objectsURL = rootURL.appendingPathComponent("objects")
+        self.objectsURL = rootURL.appendingPathComponent("blobs")
         
         try FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: objectsURL, withIntermediateDirectories: true)
