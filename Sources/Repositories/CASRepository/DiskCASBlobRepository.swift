@@ -16,7 +16,6 @@ actor DiskCASBlobRepository: CASBlobRepository {
     }
     
     func set(value: Data) async throws -> Data {
-        
         let digest = SHA256.hash(data: value)
         let key = Data(digest)
         let hashString = key.map { String(format: "%02x", $0) }.joined()
@@ -37,7 +36,8 @@ actor DiskCASBlobRepository: CASBlobRepository {
         if !FileManager.default.fileExists(atPath: finalURL.path) {
             try FileManager.default.moveItem(at: tempFileURL, to: finalURL)
         } else {
-            try? FileManager.default.removeItem(at: tempFileURL)
+            try? FileManager.default.removeItem(at: finalURL)
+            try FileManager.default.moveItem(at: tempFileURL, to: finalURL)
         }
         
         return key

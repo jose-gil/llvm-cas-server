@@ -9,29 +9,31 @@ The KeyValue or ActionCache: This is a map that associates a "Question" with an 
 
 It has two services:
 
-- PutValueRequest -> key: Data, Value: Dictonary<String, Data> -> # -> PutValueResponse. You put all your inputs referecenes related with CASID (the source code of main.c, the compiler flags -O3, the headers).
+- PutValueRequest:  You put all your inputs referecenes related with CASID (the source code of main.c, the compiler flags -O3, the headers).
+-> key: `Data`, Value: `Dictonary<String, Data>` -> # -> PutValueResponse.
 
-- GetValueRequest -> key: Data -> # -> GetValueResponse -> Value: Dictonary<String, Data>. You ask the service: "Has anyone already executed the action with this CASID?".
+- GetValueRequest: You ask the service: "Has anyone already executed the action with this CASID?".
+-> key: `Data` -> # -> GetValueResponse -> Value: `Dictonary<String, Data>`. 
 
 ## CAS Service
 
 This is a service where the "key" is the hash of the content. If you give it the same file twice, it gives you the same key. It is immutable.
 
 The basic unit of the CAS library is a `CASObject`, where it contains:
-* data - `CASBytes`: arbitrary data
-* references - array<CASDataID> : references to other CASObject
+* blob - `CASBytes`: arbitrary data
+* references - `Array<CASDataID>`: references to other CASObject
 
-CASDataID:: id: Data
-CASObject:: blob: CASBytes , references: CASDataID
-CASBlob:: blob: CASBytes
-CASBytes:: data: Data | filepath: String
-ResponseError:: description: String
+- CASSaveRequest: Save the blob (data) and return a CASID for this blob.
+-> data: CASBlob -> blob: CASBytes -> data: `Data`, file_path: `String` # -> CASSaveResponse -> contents: CASDataID -> id: `Data`
 
-- CASSaveRequest -> data: CASBlob -> blob: CASBytes  -> data: Data, file_path: String # -> CASSaveResponse -> contents: CASDataID -> id: Data
-- CASLoadRequest -> cas_id: CASDataID, write_to_file: Bool -> id: Data -> # -> CASLoadResponse -> contents: CASBlob -> blob: CASBytes -> data: Data
+- CASLoadRequest: Return the blob (data) using a CASID.
+-> cas_id: CASDataID, write_to_file: `Bool` -> id: `Data` -> # -> CASLoadResponse -> contents: CASBlob -> blob: CASBytes -> data: `Data`
 
-- CASGetRequest -> CASDataID -> id -> # -> CASGetResponse -> CASObject -> CASBytes, Array<CASDataID>
-- CASPutRequest -> CASObject -> CASBytes, Array<CASDataID> -> # -> CASPUTResponse -> CASDataID -> id
+- CASPutRequest: Save the object (data) and a array of references (CASID) and return a CASID for this object.
+ -> CASObject -> blob: CASBytes, reference: `Array<CASDataID>` -> # -> CASPUTResponse -> CASDataID -> id: `Data`
+
+- CASGetRequest: Return the object (data an de refe¡rences)
+ -> CASDataID -> id: `Data` -> # -> CASGetResponse -> CASObject -> blob: CASBytes, references: `Array<CASDataID>`
 
 ## Contribute
 

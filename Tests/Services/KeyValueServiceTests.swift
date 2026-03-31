@@ -1,5 +1,4 @@
 import Foundation
-import GRPCCore
 import Testing
 @testable import Server
 
@@ -18,21 +17,6 @@ final class MockKeyValueRepository: KeyValueRepository {
         keyMock = key
         return resultMock
     }
-}
-
-extension ServerContext {
-    static let stub = ServerContext(
-        descriptor: .init(
-            service: .init(
-                package: "",
-                service: ""
-            ),
-            method: ""
-        ),
-        remotePeer: "",
-        localPeer: "",
-        cancellation: ServerContext.RPCCancellationHandle.init()
-    )
 }
 
 @MainActor
@@ -72,5 +56,22 @@ struct KeyValueServiceTests {
         
         #expect(repository.keyMock == key)
         #expect(try result.outcome == CompilationCacheService_Keyvalue_V1_GetValueResponse.Outcome.keyNotFound)
+    }
+    
+    @Test func putValue_success() async throws {
+        let key = Data("key".utf8)
+        let value: CompilationCacheService_Keyvalue_V1_Value = .with {
+            $0.entries = ["key": Data("value".utf8)]
+        }
+        let request: CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.PutValue.Input = .with {
+            $0.key = key
+            $0.value = value
+        }
+        
+        let result = try await sut.putValue(request: request, context: .stub)
+        
+        #expect(!result.hasError)
+        #expect(try repository.valueMock == value.serializedData())
+        #expect(repository.keyMock == key)
     }
 }

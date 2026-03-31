@@ -14,32 +14,44 @@ actor DiskCASObjectRepository: CASObjectRepository {
         try FileManager.default.createDirectory(at: objectsURL, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
     }
-    
+
     func set(data: Data, references: [Data]) async throws -> Data {
         let payload = encode(data: data, references: references)
+        let digest = SHA256.hash(data: payload)
+        let key = Data(digest)
+        let hashString = key.map { String(format: "%02x", $0) }.joined()
         
-        let key = Data(SHA256.hash(data: payload))
-        let hexName = key.map { String(format: "%02x", $0) }.joined()
+        let prefix = String(hashString.prefix(2))
+        let folderURL = objectsURL.appendingPathComponent(prefix)
+        let finalURL = folderURL.appendingPathComponent(hashString)
         
-        let folderURL = objectsURL.appendingPathComponent(String(hexName.prefix(2)))
-        let fileURL = folderURL.appendingPathComponent(hexName)
+        if FileManager.default.fileExists(atPath: finalURL.path) {
+            return key
+        }
         
-        if FileManager.default.fileExists(atPath: fileURL.path) { return key }
-        
-        let tempURL = tmpURL.appendingPathComponent(UUID().uuidString)
-        try payload.write(to: tempURL, options: .atomic)
+        let tempFileURL = tmpURL.appendingPathComponent(UUID().uuidString)
+        try payload.write(to: tempFileURL, options: .atomic)
         
         try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
-        try FileManager.default.moveItem(at: tempURL, to: fileURL)
+        
+        if !FileManager.default.fileExists(atPath: finalURL.path) {
+            try FileManager.default.moveItem(at: tempFileURL, to: finalURL)
+        } else {
+            try? FileManager.default.removeItem(at: finalURL)
+            try FileManager.default.moveItem(at: tempFileURL, to: finalURL)
+        }
         
         return key
     }
     
     func get(key: Data) async throws -> (data: Data, references: [Data])? {
-        let hexName = key.map { String(format: "%02x", $0) }.joined()
-        let fileURL = objectsURL
-            .appendingPathComponent(String(hexName.prefix(2)))
-            .appendingPathComponent(hexName)
+        let hashString = key.map { String(format: "%02x", $0) }.joined()
+        let prefix = String(hashString.prefix(2))
+        let fileURL = objectsURL.appendingPathComponent(prefix).appendingPathComponent(hashString)
+        
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return nil
+        }
         
         guard let payload = try? Data(contentsOf: fileURL) else { return nil }
         
@@ -48,17 +60,20 @@ actor DiskCASObjectRepository: CASObjectRepository {
 }
 
 extension DiskCASObjectRepository {
+    
     private func encode(data: Data, references: [Data]) -> Data {
         var buffer = Data()
+        
+        let uniqueSortedRefs = Array(Set(references)).sorted { $0.lexicographicallyPrecedes($1) }
         
         var dataLen = UInt64(data.count).littleEndian
         buffer.append(withUnsafeBytes(of: &dataLen) { Data($0) })
         buffer.append(data)
         
-        var refsCount = UInt64(references.count).littleEndian
+        var refsCount = UInt64(uniqueSortedRefs.count).littleEndian
         buffer.append(withUnsafeBytes(of: &refsCount) { Data($0) })
         
-        for ref in references {
+        for ref in uniqueSortedRefs {
             buffer.append(ref)
         }
         
@@ -67,29 +82,33 @@ extension DiskCASObjectRepository {
     
     private func decode(payload: Data) -> (data: Data, references: [Data])? {
         var offset = 0
+        let uint64Size = MemoryLayout<UInt64>.size
         
-        let dataLenSize = MemoryLayout<UInt64>.size
-        guard payload.count >= offset + dataLenSize else { return nil }
-        let dataLen = payload.subdata(in: offset..<offset+dataLenSize).withUnsafeBytes {
+        guard payload.count >= offset + uint64Size else { return nil }
+        let dataLen = payload.subdata(in: offset..<offset + uint64Size).withUnsafeBytes {
             $0.load(as: UInt64.self).littleEndian
         }
-        offset += dataLenSize
+        offset += uint64Size
         
         guard payload.count >= offset + Int(dataLen) else { return nil }
-        let data = payload.subdata(in: offset..<offset+Int(dataLen))
+        let data = payload.subdata(in: offset..<offset + Int(dataLen))
         offset += Int(dataLen)
         
-        guard payload.count >= offset + dataLenSize else { return nil }
-        let refsCount = payload.subdata(in: offset..<offset+dataLenSize).withUnsafeBytes {
+        guard payload.count >= offset + uint64Size else { return nil }
+        let refsCount = payload.subdata(in: offset..<offset + uint64Size).withUnsafeBytes {
             $0.load(as: UInt64.self).littleEndian
         }
-        offset += dataLenSize
+        offset += uint64Size
         
         var references: [Data] = []
+        let refSize = 32
+        
         for _ in 0..<Int(refsCount) {
-            guard payload.count >= offset + 32 else { break }
-            references.append(payload.subdata(in: offset..<offset+32))
-            offset += 32
+            guard payload.count >= offset + refSize else {
+                return nil
+            }
+            references.append(payload.subdata(in: offset..<offset + refSize))
+            offset += refSize
         }
         
         return (data, references)
