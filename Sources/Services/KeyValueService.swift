@@ -1,5 +1,6 @@
 import Foundation
 import GRPCCore
+import Logging
 
 struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleServiceProtocol {
     private let repository: KeyValueRepository
@@ -14,6 +15,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.PutValue.Output {
         do {
             let key = request.key
+            Logger.keyValue.debug("putValue -- \(request.key.map { String(format: "%02x", $0) }.joined())")
             let value = try request.value.serializedData()
             try await repository.setValue(key: key, value: value)
             return .init()
@@ -31,6 +33,7 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         context: ServerContext
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.GetValue.Output {        
         do {
+            Logger.keyValue.debug("getValue -- \(request.key.map { String(format: "%02x", $0) }.joined())")
             if let data = try await repository.getValue(key: request.key) {
                 let value = try CompilationCacheService_Keyvalue_V1_Value(serializedBytes: data)
                 return .with {
