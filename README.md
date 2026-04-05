@@ -9,11 +9,11 @@ The KeyValue or ActionCache: This is a map that associates a "Question" with an 
 
 It has two services:
 
-- PutValueRequest:  You put all your inputs referecenes related with CASID (the source code of main.c, the compiler flags -O3, the headers).
--> key: `Data`, Value: `Dictonary<String, Data>` -> # -> PutValueResponse.
-
 - GetValueRequest: You ask the service: "Has anyone already executed the action with this CASID?".
 -> key: `Data` -> # -> GetValueResponse -> Value: `Dictonary<String, Data>`. 
+
+- PutValueRequest:  You put all your inputs referecenes related with CASID (the source code of main.c, the compiler flags -O3, the headers).
+-> key: `Data`, Value: `Dictonary<String, Data>` -> # -> PutValueResponse.
 
 ## CAS Service
 

@@ -14,10 +14,9 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         context: ServerContext
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.PutValue.Output {
         do {
-            let key = request.key
-            Logger.keyValue.debug("putValue -- \(request.key.map { String(format: "%02x", $0) }.joined())")
+            Logger.keyValue.debug("putValue -- \(request.key.toCasID())")
             let value = try request.value.serializedData()
-            try await repository.setValue(key: key, value: value)
+            try await repository.setValue(key: request.key, value: value)
             return .init()
         } catch {
             return .with {
@@ -33,23 +32,25 @@ struct KeyValueService: CompilationCacheService_Keyvalue_V1_KeyValueDB.SimpleSer
         context: ServerContext
     ) async throws -> CompilationCacheService_Keyvalue_V1_KeyValueDB.Method.GetValue.Output {        
         do {
-            Logger.keyValue.debug("getValue -- \(request.key.map { String(format: "%02x", $0) }.joined())")
             if let data = try await repository.getValue(key: request.key) {
                 let value = try CompilationCacheService_Keyvalue_V1_Value(serializedBytes: data)
+                Logger.keyValue.debug("getValue - successs - \(request.key.toCasID())")
                 return .with {
                     $0.outcome = .success
                     $0.value = value
                 }
             } else {
+                Logger.keyValue.debug("getValue - not found - \(request.key.toCasID())")
                 return .with {
                     $0.outcome = .keyNotFound
                 }
             }
         } catch {
+            Logger.keyValue.debug("getValue - error - \(request.key.toCasID())")
             return .with {
                 $0.outcome = .error
                 $0.error = .with {
-                    $0.description_p = "Internal error: \(error.localizedDescription)"
+                    $0.description_p = "getValue - error: \(error.localizedDescription)"
                 }
             }
         }

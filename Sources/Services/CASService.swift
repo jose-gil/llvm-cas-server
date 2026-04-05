@@ -15,18 +15,18 @@ struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProt
         request: CompilationCacheService_Cas_V1_CASDBService.Method.Save.Input,
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Save.Output {
-        Logger.cas.debug("save")
         let dataToSave = request.data.blob.data
         
         guard !dataToSave.isEmpty else {
             return .with {
-                $0.error = .with { $0.description_p = "Empty data" }
+                Logger.cas.debug("save - empty data")
+                $0.error = .with { $0.description_p = "save - empty data" }
             }
         }
         
         do {
             let hashID = try await blobRepository.set(value: dataToSave)
-            Logger.cas.debug("save -- \(hashID.map { String(format: "%02x", $0) }.joined())")
+            Logger.cas.debug("save - \(hashID.toCasID())")
             return .with {
                 $0.casID = .with { $0.id = hashID }
             }
@@ -42,7 +42,7 @@ struct CASService: CompilationCacheService_Cas_V1_CASDBService.SimpleServiceProt
         context: ServerContext
     ) async throws -> CompilationCacheService_Cas_V1_CASDBService.Method.Load.Output {
         let key = request.casID.id
-        Logger.cas.debug("save -- \(key.map { String(format: "%02x", $0) }.joined())")
+        Logger.cas.debug("load -- \(key.toCasID()) : \(request.writeToDisk)")
         do {
             if let data = try await blobRepository.get(key: key) {
                 return .with {

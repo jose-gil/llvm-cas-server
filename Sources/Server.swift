@@ -1,9 +1,15 @@
 import GRPCCore
 import GRPCNIOTransportHTTP2
+import Logging
 
 @main
 struct Server {
     static func main() async throws {
+        LoggingSystem.bootstrap { label in
+            var handler = StreamLogHandler.standardError(label: label)
+            handler.logLevel = .debug
+            return handler
+        }
         let port: Int = 9093
         let rootPath: String = "/tmp/llvm-cas"
         let cache = NSDataKeyValueSource(limit: 100)
@@ -26,7 +32,7 @@ struct Server {
         try await withThrowingDiscardingTaskGroup { group in
             group.addTask { try await server.serve() }
             if let address = try await server.listeningAddress {
-                print("Server listening on \(address)")
+                Logger.server.info("Server listening on \(address)")
             }
         }
     }
